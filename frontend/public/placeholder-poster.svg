@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Dark background -->
+    <rect width="300" height="450" fill="#1F2937"/>
+    
+    <!-- Film icon -->
+    <path d="M150 175 C 140 175, 132 183, 132 193 V 257 C 132 267, 140 275, 150 275 H 214 C 224 275, 232 267, 232 257 V 193 C 232 183, 224 175, 214 175 H 150 Z M 146 191 H 218 V 259 H 146 V 191 Z" fill="#6B7280"/>
+    <rect x="156" y="201" width="10" height="10" fill="#6B7280"/>
+    <rect x="156" y="221" width="10" height="10" fill="#6B7280"/>
+    <rect x="156" y="241" width="10" height="10" fill="#6B7280"/>
+    <rect x="176" y="201" width="10" height="10" fill="#6B7280"/>
+    <rect x="176" y="221" width="10" height="10" fill="#6B7280"/>
+    <rect x="176" y="241" width="10" height="10" fill="#6B7280"/>
+    <rect x="196" y="201" width="10" height="10" fill="#6B7280"/>
+    <rect x="196" y="221" width="10" height="10" fill="#6B7280"/>
+    <rect x="196" y="241" width="10" height="10" fill="#6B7280"/>
+    
+    <!-- Text -->
+    <text x="150" y="320" font-family="Arial, sans-serif" font-size="16" fill="#9CA3AF" text-anchor="middle">No Poster Available</text>
+    <text x="150" y="345" font-family="Arial, sans-serif" font-size="12" fill="#6B7280" text-anchor="middle">Movie Database</text>
+</svg> 
