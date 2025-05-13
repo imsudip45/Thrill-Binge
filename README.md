@@ -1,6 +1,6 @@
-# Movie Database Project
+# ThrillBinge
 
-A full-stack web application for browsing and searching movies, built with Next.js and Django.
+A full-stack web application for discovering, browsing and streaming movies, built with Next.js and Django.
 
 ## Features
 
@@ -24,7 +24,8 @@ A full-stack web application for browsing and searching movies, built with Next.
 - Django 4.2
 - Django REST Framework
 - SQLite Database
-- TMDB API Integration
+- TMDB API Integration with Bearer Token Authentication
+- Django CORS Headers for frontend communication
 
 ## Getting Started
 
@@ -32,6 +33,7 @@ A full-stack web application for browsing and searching movies, built with Next.
 - Python 3.8+
 - Node.js 16+
 - npm or yarn
+- TMDB API Bearer Token
 
 ### Backend Setup
 1. Navigate to the backend directory:
@@ -50,12 +52,53 @@ A full-stack web application for browsing and searching movies, built with Next.
    pip install -r requirements.txt
    ```
 
-4. Run migrations:
+4. Create and apply migrations:
    ```bash
+   python manage.py makemigrations
    python manage.py migrate
    ```
 
-5. Start the Django server:
+5. Set up required data:
+   ```bash
+   python manage.py setup_industries  # Required before importing any movies
+   ```
+
+6. Import movies from TMDB:
+   There are several ways to import movies into the database:
+
+   a. Import popular movies (recommended for initial setup):
+   ```bash
+   python manage.py import_tmdb_movies
+   ```
+   This will import the current popular movies from TMDB along with their:
+   - Basic details (title, overview, release date, etc.)
+   - Genres
+   - Cast members (top 10 cast members)
+   - Crew members (director, writer, etc.)
+   - Videos (trailers, teasers)
+   - Posters and backdrop images
+
+   b. Import specific movies by name:
+   ```bash
+   python manage.py import_movie_by_name "Movie Title"
+   ```
+   Example:
+   ```bash
+   python manage.py import_movie_by_name "The Dark Knight"
+   ```
+
+   c. Import thriller movies (genre-specific):
+   ```bash
+   python manage.py import_thriller_movies
+   ```
+   This will import a curated list of thriller movies.
+
+   Note: Make sure you have set up your TMDB API Bearer token in the .env file:
+   ```
+   TMDB_BEARER_TOKEN=your_bearer_token_here
+   ```
+
+7. Start the Django server:
    ```bash
    python manage.py runserver
    ```
@@ -84,11 +127,12 @@ A full-stack web application for browsing and searching movies, built with Next.
 ## Project Structure
 
 ```
-project_movie/
+thrillbinge/
 ├── backend/
-│   ├── movie_site/      # Django project settings
+│   ├── thrillbinge/     # Django project settings
 │   ├── movies/          # Movies app
 │   ├── api/            # API endpoints
+│   ├── users/          # User management app
 │   └── requirements.txt
 └── frontend/
     ├── app/            # Next.js pages
@@ -102,16 +146,41 @@ project_movie/
 - `GET /api/movies/` - List all movies
 - `GET /api/movies/{id}/` - Get movie details
 - `GET /api/movies/search/` - Search movies
+- `GET /api/movies/{id}/videos/` - Get movie trailers and videos
+- `GET /api/movies/{id}/cast/` - Get movie cast information
+- `GET /api/movies/{id}/crew/` - Get movie crew information
 
 ## Environment Variables
 
 ### Backend
 - `SECRET_KEY` - Django secret key
 - `DEBUG` - Debug mode (True/False)
-- `TMDB_API_KEY` - TMDB API key
+- `TMDB_BEARER_TOKEN` - TMDB API Bearer Token
+- `CORS_ALLOWED_ORIGINS` - List of allowed frontend origins
 
 ### Frontend
-- `NEXT_PUBLIC_API_URL` - Backend API URL
+- `NEXT_PUBLIC_API_URL` - Backend API URL (use http://localhost:8000 instead of 127.0.0.1)
+
+## Models
+
+The backend includes the following main models:
+- Movie - Store movie information
+- Genre - Movie genres
+- Person - Cast and crew information
+- MovieCast - Linking table for movie cast members
+- MovieCrew - Linking table for movie crew members
+- Video - Store movie trailers and video links
+
+## CORS Configuration
+
+The backend is configured to accept requests from the frontend using Django CORS Headers. Make sure the frontend origin is properly set in the Django settings:
+
+```python
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+```
 
 ## Contributing
 
