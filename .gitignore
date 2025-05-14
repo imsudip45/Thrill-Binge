@@ -23,6 +23,7 @@ var/
 pip-log.txt
 pip-delete-this-directory.txt
 .env
+.env.frontend
 venv/
 ENV/
 
