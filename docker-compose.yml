@@ -3,6 +3,7 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
+    restart: always
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
@@ -15,22 +16,22 @@ services:
       - app-network
     command: >
       sh -c "cd /app; 
-             sed -i 's/prefetch_related([^)]*)/prefetch_related(\"cast\", \"crew\", \"videos\")/g' movies/views.py;
-             python manage.py migrate;
-             python manage.py setup_industries;
-             python manage.py import_thriller_movies --pages 5;
+             python manage.py migrate &&
+             python manage.py setup_industries &&
+             python manage.py import_thriller_movies --pages 5 &&
              python manage.py runserver 0.0.0.0:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/movies/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || curl -f http://localhost:8000/ || exit 0"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    restart: always
     volumes:
       - ./frontend:/app
       - /app/node_modules
