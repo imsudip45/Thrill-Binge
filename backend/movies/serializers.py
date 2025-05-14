@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import Genre, Movie, Person, MovieCast, MovieCrew, Video, Industry
+from .models import Movie, Person, MovieCast, MovieCrew, Video, Industry
 
-class GenreSerializer(serializers.ModelSerializer):
+class IndustrySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Genre
-        fields = ['id', 'tmdb_id', 'name']
+        model = Industry
+        fields = ['id', 'name', 'slug', 'description']
 
 class PersonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,13 +28,7 @@ class VideoSerializer(serializers.ModelSerializer):
         model = Video
         fields = ['id', 'type', 'key', 'site', 'name']
 
-class IndustrySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Industry
-        fields = ['id', 'name', 'description', 'slug']
-
 class MovieSerializer(serializers.ModelSerializer):
-    genres = GenreSerializer(many=True)
     cast = MovieCastSerializer(many=True, read_only=True)
     crew = MovieCrewSerializer(many=True, read_only=True)
     videos = VideoSerializer(many=True, read_only=True)
@@ -45,7 +39,7 @@ class MovieSerializer(serializers.ModelSerializer):
         model = Movie
         fields = [
             'id', 'tmdb_id', 'title', 'overview', 'poster_path', 'backdrop_path',
-            'release_date', 'popularity', 'rating', 'genres', 'cast', 'crew', 'videos', 'autoembed_url', 'industry'
+            'release_date', 'popularity', 'rating', 'cast', 'crew', 'videos', 'autoembed_url', 'industry'
         ]
 
     def get_autoembed_url(self, obj):

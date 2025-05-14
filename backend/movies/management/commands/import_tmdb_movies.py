@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
 from movies.tmdb_service import (
-    get_popular_movies, get_movie_details, get_movie_credits, get_movie_videos, get_genres,
+    get_popular_movies, get_movie_details, get_movie_credits, get_movie_videos,
     get_movies_by_genre, search_movies, get_now_playing_movies, get_upcoming_movies, get_top_rated_movies
 )
-from movies.models import Movie, Genre, Person, MovieCast, MovieCrew, Video
+from movies.models import Movie, Industry, Person, MovieCast, MovieCrew, Video
 
 class Command(BaseCommand):
     help = 'Import movies from TMDB by popularity, genre, search, or other endpoints'
@@ -16,10 +16,17 @@ class Command(BaseCommand):
         parser.add_argument('--query', type=str, help='Search query (required for search method)')
 
     def handle(self, *args, **options):
-        # Import genres first
-        tmdb_genres = get_genres().get('genres', [])
-        for g in tmdb_genres:
-            Genre.objects.update_or_create(tmdb_id=g['id'], defaults={'name': g['name']})
+        # Import industries first
+        industries = {
+            'Hollywood': 'American film industry',
+            'Bollywood': 'Indian Hindi-language film industry',
+            'South Indian': 'South Indian film industry'
+        }
+        for name, description in industries.items():
+            Industry.objects.get_or_create(
+                name=name,
+                defaults={'description': description}
+            )
 
         method = options['method']
         pages = options['pages']
@@ -60,6 +67,9 @@ class Command(BaseCommand):
             movies = data.get('results', [])
             for idx, m in enumerate(movies):
                 print(f"Processing movie: {m['title']}")
+                # Determine industry based on movie data
+                industry = Industry.objects.get(name='Hollywood')  # Default to Hollywood
+                
                 movie, created = Movie.objects.update_or_create(
                     tmdb_id=m['id'],
                     defaults={
@@ -70,11 +80,9 @@ class Command(BaseCommand):
                         'release_date': m.get('release_date') or None,
                         'popularity': m.get('popularity', 0),
                         'rating': m.get('vote_average', 0),
+                        'industry': industry
                     }
                 )
-                # Set genres
-                genre_ids = m.get('genre_ids', [])
-                movie.genres.set(Genre.objects.filter(tmdb_id__in=genre_ids))
 
                 # Fetch and add credits
                 credits = get_movie_credits(m['id'])

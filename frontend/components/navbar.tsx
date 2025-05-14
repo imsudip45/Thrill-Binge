@@ -63,13 +63,13 @@ export default function Navbar() {
             <span className="hidden md:block text-sm bg-gradient-to-r from-red-500 to-red-700 text-white px-3 py-1 rounded-full font-medium animate-pulse">
               Use Brave Browser for AD free experience
             </span>
-            <div className="md:hidden flex items-center">
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                className="text-white focus:outline-none"
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
+          <div className="md:hidden flex items-center">
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              className="text-white focus:outline-none"
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
             </div>
           </div>
         </div>

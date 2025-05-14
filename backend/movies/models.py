@@ -3,13 +3,6 @@ from django.utils.text import slugify
 
 # Create your models here.
 
-class Genre(models.Model):
-    tmdb_id = models.IntegerField(unique=True)
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
-
 class Industry(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -35,7 +28,6 @@ class Movie(models.Model):
     release_date = models.DateField(null=True, blank=True)
     popularity = models.FloatField(default=0)
     rating = models.FloatField(default=0)
-    genres = models.ManyToManyField(Genre, related_name='movies')
     industry = models.ForeignKey(Industry, on_delete=models.SET_NULL, null=True, related_name='movies')
 
     class Meta:

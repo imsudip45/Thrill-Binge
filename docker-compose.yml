@@ -1,0 +1,45 @@
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    env_file:
+      - .env-files/.env
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    command: >
+      sh -c "cd /app; 
+             sed -i 's/prefetch_related([^)]*)/prefetch_related(\"cast\", \"crew\", \"videos\")/g' movies/views.py;
+             python manage.py migrate;
+             python manage.py setup_industries;
+             python manage.py import_thriller_movies --pages 5;
+             python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - .env-files/.env.frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  static_volume:
+  media_volume: 

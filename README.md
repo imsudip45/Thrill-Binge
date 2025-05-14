@@ -80,12 +80,24 @@ A full-stack web application for discovering, browsing and streaming movies, bui
 
    b. Import specific movies by name:
    ```bash
-   python manage.py import_movie_by_name "Movie Title"
+   python manage.py import_movie_by_name "Movie Title" --industry "Industry Name"
    ```
    Example:
    ```bash
-   python manage.py import_movie_by_name "The Dark Knight"
+   python manage.py import_movie_by_name "The Dark Knight" --industry "Hollywood"
    ```
+
+   Note: The industry name is required and must match one of the following:
+   - Hollywood
+   - Bollywood
+   - Korean
+   - Japanese
+   - Chinese
+   - British
+   - French
+   - German
+   - Italian
+   - Spanish
 
    c. Import thriller movies (genre-specific):
    ```bash
@@ -181,6 +193,199 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 ```
+
+## Docker Setup
+
+The project includes Docker configuration for both frontend and backend services, making it easy to deploy and run in any environment.
+
+### Docker Files Structure
+```
+thrillbinge/
+├── backend/
+│   └── Dockerfile        # Django backend configuration
+├── frontend/
+│   └── Dockerfile        # Next.js frontend configuration
+└── docker-compose.yml    # Services orchestration
+```
+
+### Backend Dockerfile
+The backend service uses Python 3.8 slim image and includes:
+```dockerfile
+# Use Python 3.8 slim image as base
+FROM python:3.8-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Run migrations and collect static files
+RUN python manage.py collectstatic --noinput
+
+# Expose port
+EXPOSE 8000
+
+# Start command
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "thrillbinge.wsgi:application"]
+```
+
+### Frontend Dockerfile
+The frontend service uses a multi-stage build process with Node.js 16:
+```dockerfile
+# Build stage
+FROM node:16-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy project files
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM node:16-alpine AS runner
+
+WORKDIR /app
+
+# Copy built assets from builder
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/public ./public
+
+# Expose port
+EXPOSE 3000
+
+# Start command
+CMD ["npm", "start"]
+```
+
+### Docker Compose Configuration
+The `docker-compose.yml` file orchestrates both services:
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    environment:
+      - DEBUG=1
+      - DJANGO_SECRET_KEY=your-secret-key-here
+      - TMDB_BEARER_TOKEN=${TMDB_BEARER_TOKEN}
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py setup_industries &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  static_volume:
+  media_volume:
+```
+
+### Running with Docker
+
+1. Create a `.env` file in the root directory:
+   ```
+   TMDB_BEARER_TOKEN=your_token_here
+   ```
+
+2. Build and start the services:
+   ```bash
+   docker-compose up --build
+   ```
+
+3. Run in detached mode:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. Stop the services:
+   ```bash
+   docker-compose down
+   ```
+
+### Important Notes
+
+- Backend service automatically runs:
+  - Database migrations
+  - Industry setup
+  - Django development server
+- Frontend service is accessible at http://localhost:3000
+- Backend API is accessible at http://localhost:8000
+- Static and media files are persisted using Docker volumes
+- Development mode is enabled by default
+
+### Production Deployment
+
+For production deployment, consider the following modifications:
+
+1. Environment Settings:
+   - Set `DEBUG=0` in backend environment
+   - Use a secure `DJANGO_SECRET_KEY`
+   - Configure proper SSL/TLS
+   - Set up proper logging
+
+2. Database:
+   - Add a production-ready database service
+   - Configure database backups
+
+3. Web Server:
+   - Add Nginx as a reverse proxy
+   - Configure proper SSL termination
+   - Set up proper static file serving
+
+4. Security:
+   - Review and secure environment variables
+   - Implement rate limiting
+   - Set up proper firewall rules
 
 ## Contributing
 

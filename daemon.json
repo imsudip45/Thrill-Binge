@@ -1,0 +1,9 @@
+{
+  "dns": ["8.8.8.8", "8.8.4.4"],
+  "registry-mirrors": [
+    "https://registry-1.docker.io",
+    "https://docker.mirrors.ustc.edu.cn"
+  ],
+  "max-concurrent-downloads": 10,
+  "max-concurrent-uploads": 5
+} 

@@ -1,162 +1,133 @@
 from django.core.management.base import BaseCommand
-from movies.tmdb_service import search_movies, get_movie_details, get_movie_credits, get_movie_videos
-from movies.models import Movie, Genre, Person, MovieCast, MovieCrew, Video, Industry
-from django.db import transaction
-from datetime import datetime
-import time
+from movies.tmdb_service import (
+    get_movies_by_genre, get_movie_details, get_movie_credits,
+    get_movie_videos, search_movies
+)
+from movies.models import Movie, Industry, Person, MovieCast, MovieCrew, Video
+import requests
+from django.conf import settings
 
 class Command(BaseCommand):
-    help = 'Import thriller movies from 2020 onwards for all industries'
+    help = 'Import top thriller movies from different industries'
 
     def add_arguments(self, parser):
-        parser.add_argument('--pages', type=int, default=3, help='Number of pages to import per industry')
+        parser.add_argument('--pages', type=int, default=5, help='Number of pages to import per industry')
 
-    @transaction.atomic
-    def import_movie_with_industry(self, movie_data, industry):
-        try:
-            # Get detailed movie info
-            details = get_movie_details(movie_data['id'])
-            if not details:
-                return None
+    def get_imdb_top_thrillers(self, industry_name, page=1):
+        """Get top thriller movies from IMDB for specific industry"""
+        if industry_name == 'Hollywood':
+            # For Hollywood, use TMDB's thriller genre (53)
+            return get_movies_by_genre(53, page=page)
+        elif industry_name == 'Bollywood':
+            # For Bollywood, search Hindi thriller movies
+            return search_movies('thriller', page=page, region='IN')
+        else:  # South Indian
+            # For South Indian, search Tamil thriller movies
+            # Simplify by focusing on Tamil to avoid API limitations
+            return search_movies('thriller', page=page, region='IN')
 
-            # Skip if movie is before 2020
-            release_date = details.get('release_date')
-            if not release_date or datetime.strptime(release_date, '%Y-%m-%d').year < 2020:
-                return None
-
-            # Create or update movie using the new method
-            movie, created = Movie.create_or_update(
-                tmdb_id=details['id'],
-                title=details['title'],
-                overview=details.get('overview', ''),
-                poster_path=details.get('poster_path', ''),
-                backdrop_path=details.get('backdrop_path', ''),
-                release_date=release_date,
-                popularity=float(details.get('popularity', 0)),
-                rating=float(details.get('vote_average', 0)),
-                industry=industry
-            )
-
-            # Set genres
-            genre_ids = [genre['id'] for genre in details.get('genres', [])]
-            movie.genres.set(Genre.objects.filter(tmdb_id__in=genre_ids))
-
-            # Get and set credits
-            credits = get_movie_credits(details['id'])
-            
-            # Process cast (limit to top 10)
-            MovieCast.objects.filter(movie=movie).delete()  # Clear existing cast
-            for cast in credits.get('cast', [])[:10]:
-                person, _ = Person.objects.get_or_create(
-                    tmdb_id=cast['id'],
-                    defaults={'name': cast['name'], 'profile_path': cast.get('profile_path', '')}
-                )
-                MovieCast.objects.create(
-                    movie=movie,
-                    person=person,
-                    character=cast.get('character', ''),
-                    order=cast.get('order', 0)
-                )
-
-            # Process key crew members
-            MovieCrew.objects.filter(movie=movie).delete()  # Clear existing crew
-            for crew in credits.get('crew', []):
-                if crew['job'] in ['Director', 'Screenplay', 'Writer']:
-                    person, _ = Person.objects.get_or_create(
-                        tmdb_id=crew['id'],
-                        defaults={'name': crew['name'], 'profile_path': crew.get('profile_path', '')}
-                    )
-                    MovieCrew.objects.create(
-                        movie=movie,
-                        person=person,
-                        job=crew['job'],
-                        department=crew.get('department', '')
-                    )
-
-            # Get and set videos
-            Video.objects.filter(movie=movie).delete()  # Clear existing videos
-            videos = get_movie_videos(details['id'])
-            for video in videos.get('results', []):
-                Video.objects.create(
-                    movie=movie,
-                    key=video['key'],
-                    type=video.get('type', ''),
-                    site=video.get('site', ''),
-                    name=video.get('name', '')
-                )
-
-            return movie
-
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Error processing movie {movie_data["title"]}: {str(e)}'))
-            return None
+    def get_dubbed_video(self, movie_id, original_language):
+        """Get Hindi dubbed version of the movie if available"""
+        videos = get_movie_videos(movie_id)
+        for video in videos.get('results', []):
+            if video.get('language') == 'hi' and video.get('type') == 'Trailer':
+                return video
+        return None
 
     def handle(self, *args, **options):
         pages = options['pages']
+        industries = Industry.objects.all()
         
-        # Industry-specific search terms
-        industry_configs = [
-            {
-                'name': 'Hollywood',
-                'search_terms': ['thriller', 'psychological thriller', 'crime thriller'],
-                'primary_release_year': '2020'
-            },
-            {
-                'name': 'Bollywood',
-                'search_terms': ['hindi thriller', 'bollywood thriller'],
-                'primary_release_year': '2020'
-            },
-            {
-                'name': 'South Indian',
-                'search_terms': ['tamil thriller', 'telugu thriller', 'malayalam thriller', 'kannada thriller'],
-                'primary_release_year': '2020'
-            }
-        ]
+        # Track imported movies to prevent duplicates
+        imported_movies = set()
 
-        total_imported = 0
+        for industry in industries:
+            self.stdout.write(f"Importing thriller movies for {industry.name}...")
+            
+            for page in range(1, pages + 1):
+                data = self.get_imdb_top_thrillers(industry.name, page=page)
+                movies = data.get('results', [])[:20]  # Get top 20 movies per page
 
-        for config in industry_configs:
-            try:
-                industry = Industry.objects.get(name=config['name'])
-                self.stdout.write(f"\nProcessing {config['name']} thrillers...")
-
-                for search_term in config['search_terms']:
-                    self.stdout.write(f"\nSearching for: {search_term}")
+                for movie_data in movies:
+                    tmdb_id = movie_data['id']
                     
-                    for page in range(1, pages + 1):
-                        self.stdout.write(f"Processing page {page}...")
+                    # Skip if we've already imported this movie
+                    if tmdb_id in imported_movies:
+                        continue
+                    
+                    imported_movies.add(tmdb_id)
+                    
+                    try:
+                        # Get detailed movie info
+                        details = get_movie_details(tmdb_id)
                         
-                        # Search for movies with primary_release_year parameter
-                        results = search_movies(
-                            query=f"{search_term} {config['primary_release_year']}",
-                            page=page
+                        # Create or update movie
+                        movie, created = Movie.objects.update_or_create(
+                            tmdb_id=tmdb_id,
+                            defaults={
+                                'title': movie_data['title'],
+                                'overview': movie_data.get('overview', ''),
+                                'poster_path': movie_data.get('poster_path', ''),
+                                'backdrop_path': movie_data.get('backdrop_path', ''),
+                                'release_date': movie_data.get('release_date') or None,
+                                'popularity': movie_data.get('popularity', 0),
+                                'rating': movie_data.get('vote_average', 0),
+                                'industry': industry
+                            }
                         )
 
-                        if not results.get('results'):
-                            break
+                        # Add credits
+                        credits = get_movie_credits(tmdb_id)
+                        for cast in credits.get('cast', [])[:10]:
+                            person, _ = Person.objects.get_or_create(
+                                tmdb_id=cast['id'],
+                                defaults={'name': cast['name'], 'profile_path': cast.get('profile_path', '')}
+                            )
+                            MovieCast.objects.update_or_create(
+                                movie=movie, person=person,
+                                defaults={'character': cast.get('character', ''), 'order': cast.get('order', 0)}
+                            )
 
-                        for movie_data in results['results']:
-                            movie = self.import_movie_with_industry(movie_data, industry)
-                            if movie:
-                                self.stdout.write(
-                                    self.style.SUCCESS(f"Successfully imported: {movie.title}")
+                        for crew in credits.get('crew', []):
+                            person, _ = Person.objects.get_or_create(
+                                tmdb_id=crew['id'],
+                                defaults={'name': crew['name'], 'profile_path': crew.get('profile_path', '')}
+                            )
+                            MovieCrew.objects.update_or_create(
+                                movie=movie, person=person,
+                                defaults={'job': crew.get('job', ''), 'department': crew.get('department', '')}
+                            )
+
+                        # Add videos
+                        videos = get_movie_videos(tmdb_id)
+                        for video in videos.get('results', []):
+                            Video.objects.update_or_create(
+                                movie=movie,
+                                key=video['key'],
+                                defaults={
+                                    'type': video.get('type', ''),
+                                    'site': video.get('site', ''),
+                                    'name': video.get('name', ''),
+                                }
+                            )
+
+                        # For South Indian movies, add Hindi dubbed version if available
+                        if industry.name == 'South Indian':
+                            dubbed_video = self.get_dubbed_video(tmdb_id, details.get('original_language'))
+                            if dubbed_video:
+                                Video.objects.update_or_create(
+                                    movie=movie,
+                                    key=dubbed_video['key'],
+                                    defaults={
+                                        'type': dubbed_video.get('type', ''),
+                                        'site': dubbed_video.get('site', ''),
+                                        'name': f"{dubbed_video.get('name', '')} (Hindi Dubbed)",
+                                    }
                                 )
-                                total_imported += 1
-                            
-                            # Add a small delay to avoid rate limiting
-                            time.sleep(0.5)
 
-            except Industry.DoesNotExist:
-                self.stdout.write(
-                    self.style.ERROR(f"Industry not found: {config['name']}")
-                )
-                continue
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Error processing {config['name']}: {str(e)}")
-                )
-                continue
+                        self.stdout.write(f"Successfully imported {movie.title}")
 
-        self.stdout.write(
-            self.style.SUCCESS(f"\nFinished! Total thriller movies imported: {total_imported}")
-        ) 
+                    except Exception as e:
+                        self.stderr.write(f"Error importing movie {movie_data.get('title')}: {str(e)}")
+
+        self.stdout.write(self.style.SUCCESS('Successfully imported thriller movies for all industries!')) 

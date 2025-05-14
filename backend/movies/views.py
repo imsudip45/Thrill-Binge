@@ -12,7 +12,7 @@ class MovieListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Movie.objects.all().prefetch_related(
-            'genres', 'cast', 'crew', 'videos'
+            'cast', 'crew', 'videos'
         ).select_related('industry')
 
         # Industry filter
@@ -73,5 +73,5 @@ class IndustryMoviesAPIView(generics.ListAPIView):
         return Movie.objects.filter(
             industry__name__iexact=industry_name
         ).prefetch_related(
-            'genres', 'cast', 'crew', 'videos'
+            'cast', 'crew', 'videos'
         ).select_related('industry')

@@ -37,8 +37,13 @@ def get_genres():
 def get_movies_by_genre(genre_id, page=1):
     return tmdb_get("/discover/movie", params={"with_genres": genre_id, "page": page})
 
-def search_movies(query, page=1):
-    return tmdb_get("/search/movie", params={"query": query, "page": page})
+def search_movies(query, page=1, language=None, region=None):
+    params = {"query": query, "page": page}
+    if language:
+        params["language"] = language
+    if region:
+        params["region"] = region
+    return tmdb_get("/search/movie", params=params)
 
 def get_now_playing_movies(page=1):
     return tmdb_get("/movie/now_playing", params={"page": page})
