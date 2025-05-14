@@ -20,6 +20,12 @@ services:
              python manage.py setup_industries;
              python manage.py import_thriller_movies --pages 5;
              python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/movies/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
@@ -35,6 +41,9 @@ services:
       - "3000:3000"
     networks:
       - app-network
+    depends_on:
+      backend:
+        condition: service_healthy
 
 networks:
   app-network:

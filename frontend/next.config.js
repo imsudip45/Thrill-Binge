@@ -6,6 +6,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
     domains: ['image.tmdb.org'],  // Allow TMDB image domain
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'image.tmdb.org',
+      },
+    ],
   },
   async rewrites() {
     return [
@@ -27,6 +33,11 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  // Add this configuration to handle API requests during build
+  env: {
+    // Flag to indicate build environment
+    IS_BUILD: process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build',
   },
 };
 
