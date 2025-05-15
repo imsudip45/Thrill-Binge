@@ -47,11 +47,9 @@ class Command(BaseCommand):
             industry=industry
         )
 
-        # Set genres
-        self.stdout.write("📋 Processing genres...")
-        genre_ids = [genre['id'] for genre in movie_data.get('genres', [])]
-        movie.genres.set(Genre.objects.filter(tmdb_id__in=genre_ids))
-
+        # Remove genre code
+        self.stdout.write("📋 Skipping genres processing (not in model)...")
+        
         # Clear existing related data
         MovieCast.objects.filter(movie=movie).delete()
         MovieCrew.objects.filter(movie=movie).delete()
