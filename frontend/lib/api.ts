@@ -107,14 +107,24 @@ export async function searchMovies(query: string): Promise<Movie[]> {
   
   try {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.MOVIES, { search: query });
+    console.log('Searching movies with URL:', url);
+    
     const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    console.log('Search response status:', response.status);
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Search API error response:', errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
-    return data.results || [];
+    console.log('Search results count:', data.results ? data.results.length : (Array.isArray(data) ? data.length : 'No results array'));
+    console.log('Search response data structure:', Object.keys(data));
+    
+    // Handle different response formats - some endpoints return {results: [...]} while others return the array directly
+    const results = data.results || (Array.isArray(data) ? data : []);
+    return results;
   } catch (error) {
     console.error('Error searching movies:', error);
     return [];

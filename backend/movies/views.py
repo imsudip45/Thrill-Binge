@@ -15,6 +15,16 @@ class MovieListAPIView(generics.ListAPIView):
             'cast', 'crew', 'videos'
         ).select_related('industry')
 
+        # Search filter
+        search_query = self.request.query_params.get('search', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(overview__icontains=search_query) |
+                Q(cast__person__name__icontains=search_query) |
+                Q(crew__person__name__icontains=search_query)
+            ).distinct()
+
         # Industry filter
         industry = self.request.query_params.get('industry', None)
         if industry:
