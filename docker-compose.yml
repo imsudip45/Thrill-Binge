@@ -18,7 +18,7 @@ services:
       sh -c "cd /app; 
              python manage.py migrate &&
              python manage.py setup_industries &&
-             python manage.py import_thriller_movies --pages 5 &&
+             python manage.py import_thriller_movies &&
              python manage.py runserver 0.0.0.0:8000"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || curl -f http://localhost:8000/ || exit 0"]

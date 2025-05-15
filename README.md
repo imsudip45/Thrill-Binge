@@ -90,20 +90,14 @@ A full-stack web application for discovering, browsing and streaming movies, bui
    Note: The industry name is required and must match one of the following:
    - Hollywood
    - Bollywood
-   - Korean
-   - Japanese
-   - Chinese
-   - British
-   - French
-   - German
-   - Italian
-   - Spanish
+   - South Indian
 
    c. Import thriller movies (genre-specific):
    ```bash
    python manage.py import_thriller_movies
    ```
-   This will import a curated list of thriller movies.
+   This will import a curated list of thriller movies. 
+   if you want to add more movies in the list edit import_thriller_movie.py in backend/movies/commands
 
    Note: Make sure you have set up your TMDB API Bearer token in the .env file:
    ```
@@ -302,7 +296,7 @@ services:
       - DEBUG=1
       - DJANGO_SECRET_KEY=your-secret-key-here
       - TMDB_BEARER_TOKEN=${TMDB_BEARER_TOKEN}
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000
     ports:
       - "8000:8000"
     command: >
