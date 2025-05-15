@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from movies.tmdb_service import import_movie_by_name
-from movies.models import Movie, Genre, Person, MovieCast, MovieCrew, Video, Industry
+from movies.models import Movie, Person, MovieCast, MovieCrew, Video, Industry
 from django.db import transaction
 
 class Command(BaseCommand):
